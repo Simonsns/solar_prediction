@@ -7,7 +7,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 #%%
-def compute_barycentre(lat: np.ndarray, long: np.ndarray, weights: np.ndarray) -> np.ndarray:
+def compute_barycentre(lat: np.ndarray, lon: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """Calcule le barycentre pondéré par un poids pour une zone donnée
 
     Args:
@@ -18,5 +18,6 @@ def compute_barycentre(lat: np.ndarray, long: np.ndarray, weights: np.ndarray) -
     Returns:
         np.ndarray: latitude et longitude du barycentre
     """
+    assert lat.shape == lon.shape == weights.shape
 
-    return np.array([np.sum(lat*weights)/np.sum(weights), np.sum(long*weights)/np.sum(weights)])
+    return np.array([np.sum(lat*weights)/np.sum(weights), np.sum(lon*weights)/np.sum(weights)])
