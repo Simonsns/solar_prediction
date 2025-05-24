@@ -1,0 +1,14 @@
+# log files
+**/logs
+
+# env files
+.env
+
+# pycache
+.pyc
+
+# build file
+build
+
+# idea base
+idea
