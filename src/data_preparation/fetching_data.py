@@ -1,7 +1,7 @@
-#%%
+
 import requests
 from tenacity import retry
-#%%
+
 def fetching_data(url: str, params: dict):
     """_summary_
 
@@ -15,4 +15,3 @@ def fetching_data(url: str, params: dict):
     response = requests.get(url, params=params)
 
     return response.json()
-# %%

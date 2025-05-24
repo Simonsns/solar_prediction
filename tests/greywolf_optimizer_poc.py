@@ -181,4 +181,3 @@ err = fitness(best_position)
 print("fitness of best solution = %.6f" % err)
 
 print("\nEnd GWO for sphere\n")
-# %%

@@ -5,10 +5,11 @@
 .env
 
 # pycache
-.pyc
+*.pyc
+__pycache__
 
 # build file
 build
 
 # idea base
-idea
+idea.py
