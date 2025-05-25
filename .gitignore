@@ -8,8 +8,17 @@
 *.pyc
 __pycache__
 
+#sqlite
+*.sqlite
+
 # build file
 build
 
 # idea base
 idea.py
+
+# data
+data
+
+# old files
+old
