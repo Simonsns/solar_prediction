@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
+#%%
 def separate_central_scenario(weather_df_list: list):
     
     """Separe le scénario central (dernier élément de la liste) des autres dataframes"""
@@ -12,7 +12,7 @@ def separate_central_scenario(weather_df_list: list):
     df_other = pd.concat(df_others, axis=1)
     
     return df_central, df_other
-
+#%%
 def set_time_index_drop_date_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Supprime les colonnes dates superflues provenant de l'appel à l'api"""
     
@@ -21,7 +21,7 @@ def set_time_index_drop_date_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(columns=[col for col in df.columns if col.startswith("date")])
 
     return df
-
+#%%
 def compute_variable_dispersion(df: pd.DataFrame, variables: list) -> pd.DataFrame:
     """Compute les écarts min-max et la dispersion des différents points de mesure sur 
     les différentes variables listées"""
@@ -38,7 +38,7 @@ def compute_variable_dispersion(df: pd.DataFrame, variables: list) -> pd.DataFra
     logging.info("Traitement des variables météorologiques terminé")
 
     return df_result
-
+#%%
 def prepare_production_data(production_data: pd.DataFrame, code_region: int, time_agregation: str) -> pd.DataFrame:
     
     """Préparation des données de production : 
@@ -64,6 +64,7 @@ def prepare_production_data(production_data: pd.DataFrame, code_region: int, tim
 
     return df_prod
 
+#%%
 def concatenate_weather_data(df_weather: pd.DataFrame, df_dispersion: pd.DataFrame) -> pd.DataFrame:
     
     """Concatène le scénario météo central (df_weather), la dispersion des variables météo (df_dispersion),
@@ -75,6 +76,7 @@ def concatenate_weather_data(df_weather: pd.DataFrame, df_dispersion: pd.DataFra
 
     return df_central
 
+#%%
 def create_exploratory_dataset(production_data: pd.DataFrame, weather_data: pd.DataFrame) -> pd.DataFrame:
     """Renvoie le dataset final composé des données de production solaire (production_data) 
     et des données météorologiques (weather_data). Quelques tests simples sont effectués (null values, merge)
