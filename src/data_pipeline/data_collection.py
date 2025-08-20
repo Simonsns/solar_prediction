@@ -1,3 +1,4 @@
+#%% Librairies
 import requests
 import openmeteo_requests
 import pandas as pd
@@ -7,32 +8,60 @@ from retry_requests import retry
 import json
 import logging
 import time
-
+from io import BytesIO
+import datetime
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+#%%
+def fetch_solar_production_data(url) -> pd.DataFrame:
+	"""Fonction basique de requête à un URL api, qui retourne les données en format dictionnaire
 
-def fetch_data_production(url, params) -> dict:
-    """Fonction basique de requête à un URL api, qui retourne les données en format dictionnaire
+	Args:
+		url (str): url de l'api
+		params (dict): paramètres de filtrage sql de l'api
 
-    Args:
-        url (str): url de l'api
-        params (dict): paramètres de filtrage sql de l'api
-
-    Returns:
-        data (dict): données sous forme de dictionnaire
-    """
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        return json.loads(response) # type: ignore
-    except requests.RequestException as e:
-        
-        logging.error(f"Erreur lors de la requête API: {e}")
-        raise
+	Returns:
+		data (dict): données sous forme de dictionnaire
+	"""
+	now = datetime.datetime.today()
+	day = now.strftime("%Y-%m-%d")
+	solar_params = {"select":"code_insee_region, date, heure, solaire", 
+					"where" : f"code_insee_region=76 AND date='{day}'",
+					"order_by":"heure", 
+					"limit": "96"}
+	try:
+		response = requests.get(url, params=solar_params)
+		response.raise_for_status()
+		json_data = response.json()
+		data = pd.DataFrame(json_data.get("results"))
+		logging.info("Production solaire en temps réel téléchargée avec succès")
+		return data 
+	
+	except requests.RequestException as e:
+		logging.error(f"Erreur lors de la requête API: {e}")
+		raise
 
 #%%
-def fetch_hourly_hist_weather_data(url: str, start_date: str, end_date: str, variables: list, lon: float, lat: float) -> pd.DataFrame:
+def fetch_all_installed_power(url: str) -> pd.DataFrame:
+	"""Retourne la capacité installée nationale téléchargée en format PARQUET sous forme de DataFrame"""
+	try:
+		response = requests.get(url)
+		response.raise_for_status()
+		df = pd.read_parquet(BytesIO(response.content))
+		return df
+
+	except requests.RequestException as e:
+		logging.error(f'Erreur lors de la requête API {e}')
+		raise
+#%%
+def fetch_hourly_hist_weather_data(url: str, 
+                                   	start_date: str, 
+                                	end_date: str, 
+                                    variables: list, 
+                                    lon: float, 
+                                    lat: float) -> pd.DataFrame:
 	
-	"""Appel à l'API météo. Retourne en sortie un dataframe avec 22 features météorologiques aux coordonnées données.
+	"""Appel à l'API météo. Retourne en sortie un dataframe avec 22 features météorologiques 
+      aux coordonnées données.
 
 	Args:
     	url (str): url de l'api
@@ -42,7 +71,8 @@ def fetch_hourly_hist_weather_data(url: str, start_date: str, end_date: str, var
         lon (float): longitude du point météorologique étudié
 
 	Returns:
-		hourly_weather_df (pd.DataFrame): DataFrame avec les variables météorologiques horaire sur la fenêtre temporelle donnée
+		hourly_weather_df (pd.DataFrame): DataFrame avec les variables 
+        météorologiques horaire sur la fenêtre temporelle donnée
 	"""
 	# Initialisation du client OPEN-METEO
 	cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
@@ -86,6 +116,7 @@ def fetch_hourly_hist_weather_data(url: str, start_date: str, end_date: str, var
 		logging.error(f"Erreur lors de la récupération des données météo : {e}")
 		raise
 
+#%%
 def fetch_all_hourly_weather_runs(url: str, start_date: str, end_date: str, 
                                   variables: list, coordinates: gpd.GeoDataFrame) -> list:
     
