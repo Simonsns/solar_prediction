@@ -7,7 +7,7 @@
 #%%
 import pandas as pd
 import geopandas as gpd
-from data_collection import fetch_all_hourly_weather_runs
+from src.data_pipeline.weather_data_collection import fetch_all_hourly_weather_runs
 from data_processing import (separate_central_scenario, 
                            set_time_index_drop_date_columns,
                            compute_variable_dispersion, 
