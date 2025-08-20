@@ -1,18 +1,14 @@
 #%% Librairies
-import requests
 import openmeteo_requests
 import pandas as pd
 import geopandas as gpd
 import requests_cache
 from retry_requests import retry
-import json
 import logging
 import time
-from io import BytesIO
-import datetime
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 #%%
-def fetch_hourly_hist_weather_data(url: str, 
+def fetch_hourly_weather_data(url: str, 
                                    	start_date: str, 
                                 	end_date: str, 
                                     variables: list, 
@@ -35,7 +31,7 @@ def fetch_hourly_hist_weather_data(url: str,
 	"""
 	# Initialisation du client OPEN-METEO
 	cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
-	retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+	retry_session = retry(cache_session, retries = 5, backoff_factor = 5)
 	openmeteo = openmeteo_requests.Client(session = retry_session) # type: ignore
 	
 	# Toutes les variables sont mentionnées ici 
@@ -88,11 +84,9 @@ def fetch_all_hourly_weather_runs(url: str, start_date: str, end_date: str,
 
     for i in range(len(coordinates)):
         
-        df = fetch_hourly_hist_weather_data(url, start_date, end_date, variables, lon[i], lat[i])
+        df = fetch_hourly_weather_data(url, start_date, end_date, variables, lon[i], lat[i])
         df.columns = [f"{col}_run_{i}" for col in df.columns]
-
-        # TODO: Remplacer le time.sleep par une gestion propre du throttling API (via retry ou async)
-        time.sleep(10) 
+        time.sleep(10) # Gérer l'appel max par secondes
         weather_df_list.append(df)
     
     return weather_df_list

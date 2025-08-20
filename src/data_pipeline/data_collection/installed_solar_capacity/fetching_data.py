@@ -1,15 +1,11 @@
-#%% Librairies
 import requests
 import pandas as pd
 from retry_requests import retry
-import json
 import logging
-import time
 from io import BytesIO
-import datetime
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-#%%
+
 def fetch_all_installed_power(url: str) -> pd.DataFrame:
 	"""Retourne la capacité installée nationale téléchargée en format PARQUET sous forme de DataFrame"""
 	try:
@@ -21,3 +17,4 @@ def fetch_all_installed_power(url: str) -> pd.DataFrame:
 	except requests.RequestException as e:
 		logging.error(f'Erreur lors de la requête API {e}')
 		raise
+

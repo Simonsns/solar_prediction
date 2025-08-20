@@ -5,19 +5,22 @@
 
 # Import libraries
 #%%
+# Librairies
 import pandas as pd
 import geopandas as gpd
-from src.data_pipeline.weather_data_collection import fetch_all_hourly_weather_runs
-from data_processing import (separate_central_scenario, 
-                           set_time_index_drop_date_columns,
-                           compute_variable_dispersion, 
-                           concatenate_weather_data,
-                            prepare_production_data,
-                            create_exploratory_dataset)
 from dotenv import find_dotenv, load_dotenv
 import logging
 import os
 from typing import List
+
+# Import ETL
+from data_collection.weather.fetching_data import fetch_all_hourly_weather_runs
+from data_processing.weather.preprocessing import (separate_central_scenario, 
+                           set_time_index_drop_date_columns,
+                           compute_variable_dispersion, 
+                           concatenate_weather_data)
+from data_processing.solar.preprocessing import prepare_production_data
+from data_processing.common import create_exploratory_dataset
 #%%
 def setup_logging() -> None:
 
@@ -54,7 +57,7 @@ def validate_inputs(coordinates_path: str, variables: List[str],
     except Exception as e:
         raise ValueError(f"Format de date invalide : {e}")
 #%% 
-def prepare_data(weather_url: str, production_link: str, coordinates_path: str, code_region: int,
+def prepare_training_data(weather_url: str, production_link: str, coordinates_path: str, code_region: int,
                  variables: List[str], start_date: str, end_date: str, time_agregation: str) -> pd.DataFrame:
     
     """Fonction qui retourne le dataset exploratoire en vue du training, divisé en deux pipelines: 
@@ -122,7 +125,7 @@ def prepare_data(weather_url: str, production_link: str, coordinates_path: str, 
     logging.info(f"Variables disponibles (dont variable cible) : {list(exploratory_df.columns)}")
 
     return exploratory_df
-#%%
+#%% Test training data
 if __name__ == "__main__":
     
     setup_logging()
@@ -147,7 +150,7 @@ if __name__ == "__main__":
     time_agregation = "1h"
     code_region = 76
 
-    exploratory_df = prepare_data(weather_url, production_link, coord_path, 
+    exploratory_df = prepare_training_data(weather_url, production_link, coord_path, 
                                   code_region, variables, start_date, end_date, 
                                   time_agregation)
     
