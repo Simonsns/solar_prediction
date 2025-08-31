@@ -1,5 +1,4 @@
-# Ce fichier est lle script orchestrateur permettant de collecter (data_collection), transformer (data_processing)
-# et valider (data_validation) les résultats
+# Ce fichier est le script orchestrateur permettant de collecter (data_collection), transformer (data_processing)
 # author : Simon Senegas
 # 2025/05/27
 
@@ -20,7 +19,7 @@ from data_processing.weather.preprocessing import (separate_central_scenario,
                            compute_variable_dispersion, 
                            concatenate_weather_data)
 from data_processing.solar.preprocessing import prepare_production_data
-from data_processing.common import create_exploratory_dataset
+from data_pipeline.data_processing.common import create_exploratory_dataset, normalize_solar_data
 #%%
 def setup_logging() -> None:
 
@@ -153,6 +152,9 @@ if __name__ == "__main__":
     exploratory_df = prepare_training_data(weather_url, production_link, coord_path, 
                                   code_region, variables, start_date, end_date, 
                                   time_agregation)
+    
+    #TODO : Produire le dataset normalisé dans les ETL inference et training
+    #solar_normalized_df = normalize_solar_data(df_installed_power, exploratory_df)
     
     output_path = str(os.getenv("save_link"))
     exploratory_df.to_csv(output_path, sep=";")
