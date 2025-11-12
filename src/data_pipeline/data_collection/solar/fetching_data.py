@@ -4,41 +4,49 @@ import requests
 import pandas as pd
 from typing import Dict, List
 import logging
+from io import BytesIO
+from json import JSONDecodeError
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 #%%
 def fetch_solar_data(url: str, 
-					 columns: List[str] | None = None, 
-					 params: Dict | None = None,
-					 ) -> pd.DataFrame:
-	"""Fonction basique de requête à un URL api, qui retourne les données solaire en format dictionnaire
+                     columns: List[str] | None = None, 
+                     params: Dict | None = None,
+                     ):
+    """Fonction basique de requête à un URL api, qui retourne les données solaire en format DataFrame Pandas
 
-	Args:
-		url (str): url de l'api
-		columns (List[str]): colonnes du DataFrame final
-		params (dict): paramètres de filtrage sql de l'api
+    Args:
+        url (str): url de l'api
+        columns (List[str]): colonnes du DataFrame final
+        params (dict): paramètres de filtrage sql de l'api
 
-	Returns:
-		data (dict): données sous forme de dictionnaire
-	"""
-	try:
-		response = requests.get(url, params=params) 
-		response.raise_for_status()
-		json_data = response.json()
-		data = pd.DataFrame(data=(json_data.get("results", [])), columns=columns)
+    Returns:
+        data (dict): données sous forme de dictionnaire
+    """
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
 
-		logging.info("Data solaire téléchargée avec succès")
-		return data
-		
-	except requests.RequestException as e:
-		logging.error(f"Erreur lors de la requête API: {e}")
-		raise
+        try:
+            json_data = response.json()
+            data = pd.DataFrame(data=(json_data.get("results", [])), columns=columns)
+            logging.info("Data solaire téléchargée avec succès au format JSON")
 
+        except (ValueError, JSONDecodeError):
+            logging.debug("Réponse non JSON, lecture en Parquet")
+            data = pd.read_parquet(BytesIO(response.content), columns=columns)
+            logging.info("Data solaire téléchargée avec succès au format Parquet")
+
+        return data
+
+    except requests.RequestException as e:
+        logging.error(f"Erreur lors de la requête API: {e}")
+        raise
 #%%
 def fetch_inference_solar_data(url: str,  n_records: int, 
 							   limit: int = 96, 
 							   columns: List[str] | None = None, 
-							   params: Dict | None = None):
+							   params: Dict | None = None) -> pd.DataFrame:
     
     """Fonction retournant plusieurs appels api (limit REST API) sous forme DataFrame.
 

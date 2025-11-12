@@ -1,7 +1,5 @@
 import pandas as pd
 import logging
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 #%%
 def separate_central_scenario(weather_df_list: list):
     

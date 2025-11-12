@@ -1,7 +1,7 @@
 #%%
 import pandas as pd
 import logging
-from data_collection.installed_solar_capacity.fetching_data import fetch_all_installed_power
+import numpy as np
 # %%
 def solar_puissance_filter(df_installed_puissance: pd.DataFrame, region_code: int) -> pd.DataFrame: 
     """Retourne le dataset de la puissance solaire installée (après appel api) sur la région de code region_code.
@@ -123,13 +123,39 @@ def resample_to_hourly_ffill(ts: pd.Series) -> pd.Series :
     ts_hourly_ffilled = ts.reindex(hourly_index, method="ffill")
 
     return ts_hourly_ffilled
-#%% Test unitaire
+# %%
+def inference_installed_power_sum(df_installed_capacity: pd.DataFrame, region_code: int) -> np.float64:
+    """
+    Calcule la capacité de production solaire totale installée (en MWh) pour une région donnée,
+    après filtrage des valeurs aberrantes temporelles et spécifiques à la région.
 
-if __name__ == "__main__":
-    start_date = '2023-01-01'
-    end_date = '2025-06-01'
-    df = fetch_all_installed_power("https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/registre-national-installation-production-stockage-electricite-agrege/exports/parquet?lang=fr&timezone=Europe%2FBerlin")
-    reg_capacity_occ = solar_puissance_filter(df, 76)
-    df_solar_puissance = delete_temporal_outlier(reg_capacity_occ)
-    df_total_capacity = cumulative_solar_puissance(reg_capacity_occ, start_date, end_date)
-    ts_capacity = resample_to_hourly_ffill(df_total_capacity)
+    La fonction filtre d'abord les données selon le code de région via `solar_puissance_filter`,
+    puis élimine les valeurs temporelles aberrantes grâce à `delete_temporal_outlier`.
+    Elle renvoie ensuite la somme des puissances installées convertie en MWh.
+
+    Args:
+        df_installed_capacity (pd.DataFrame): 
+            DataFrame contenant les informations sur la puissance installée des installations solaires.
+            Doit inclure au minimum une colonne `"puismaxinstallee"` (puissance installée en kW)
+            et un identifiant de région.
+        region_code (int): 
+            Code numérique identifiant la région pour laquelle calculer la capacité totale.
+
+    Returns:
+        np.float64: 
+            Capacité totale installée dans la région spécifiée, exprimée en mégawattheures (MWh).
+
+    Notes:
+        - Le calcul divise la somme des puissances installées (en kW) par 1e3 pour obtenir des MWh.
+        - Les fonctions `solar_puissance_filter` et `delete_temporal_outlier` doivent être définies ailleurs dans le projet.
+    """
+        
+    # Filtering temporal outlier
+    regional_installed_capacity = solar_puissance_filter(df_installed_puissance=df_installed_capacity,
+                                            region_code=region_code)
+    df_solar_puissance = delete_temporal_outlier(regional_installed_capacity )
+
+    # Somme totale de la capacité installée en MWh
+    sum_capacity = df_solar_puissance["puismaxinstallee"].sum()/1E3
+
+    return sum_capacity
