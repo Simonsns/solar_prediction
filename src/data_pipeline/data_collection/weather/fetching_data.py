@@ -8,10 +8,10 @@ import logging
 import time
 from tqdm import tqdm
 from typing import List
-from data_processing.weather.preprocessing import (separate_central_scenario, 
-                           set_time_index_drop_date_columns,
-                           compute_variable_dispersion, 
-                           concatenate_weather_data)
+from src.data_pipeline.data_processing.weather.preprocessing import (separate_central_scenario, 
+                                                                    set_time_index_drop_date_columns,
+                                                                    compute_variable_dispersion, 
+                                                                    concatenate_weather_data)
 #%%
 def fetch_hourly_weather_data(url: str, 
                                    	start_date: str, 
@@ -201,8 +201,9 @@ def fetch_forecast_weather(production_data: pd.DataFrame,
                                     forecast_weather_url)
 
     # Reshape and testing
-    df_weather = df_weather.loc[forecast_start:forecast_end]
-
+    df_weather = df_weather.loc[df_weather.index >= forecast_start]
+    df_weather = df_weather.head(len_prev)
+    
     # Test
     assert len(df_weather) == len_prev, "La longueur des prévisions ne correspond pas à len_prev"
     logging.info("[END] Données météos historiques stockées")

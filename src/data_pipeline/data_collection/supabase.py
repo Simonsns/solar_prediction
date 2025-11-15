@@ -27,6 +27,7 @@ def extract_coordinates_from_supabase(supabase_url: str, supabase_key: str, tabl
         raise
 
     return gdf
+
 def refresh_supabase_inference_table(inference_dataset: pd.DataFrame,
                                 supabase_url: str,
                                 supabase_key: str,
@@ -64,9 +65,9 @@ def refresh_supabase_inference_table(inference_dataset: pd.DataFrame,
 
     try:
         delete_response = supabase.rpc('refresh_inference_table', {}).execute()
-        logging.info("Suppression du précédent dataset d'inférence", delete_response)
-        insert_response = supabase.table(table_name).insert(data_dict).execute()
-        logging.info("Dataset d'inférence stocké sur Supabase", insert_response)
+        logging.info("Suppression du précédent dataset d'inférence")
+        insert_response = supabase.table(table_name).insert(data_dict).execute() # type: ignore
+        logging.info("Dataset d'inférence stocké sur Supabase")
     
     except Exception as e:
         logging.warning("Dataset d'inférence non stocké sur Supabase", e)

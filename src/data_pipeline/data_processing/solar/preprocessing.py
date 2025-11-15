@@ -36,4 +36,4 @@ def prepare_production_data(production_data: pd.DataFrame,
         df_prod = df_prod.set_index("date_heure")
         df_prod = df_prod.resample(time_agregation).mean() # Agrégation 
 
-    return df_prod
+    return df_prod.dropna()

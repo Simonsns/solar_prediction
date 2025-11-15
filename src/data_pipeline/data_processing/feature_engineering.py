@@ -3,10 +3,9 @@
 # last_date : 12/11/2025
 #%%
 import pandas as pd
-import geopandas as gpd
 import logging
 import numpy as np
-from typing import Dict
+from typing import Dict, List, Optional
 #%%
 def col_scenario_rename(df: pd.DataFrame, run_filter: int) -> pd.DataFrame:
     """Retourne un dataframe avec les colonnes sans chiffre "_run_X"""
@@ -94,4 +93,46 @@ def full_raw_inference_dataset(production_data: pd.DataFrame,
     full_data = pd.concat([full_data, forecast_weather], axis=0).sort_index()
         
     return full_data
+
+def transform_pipeline(raw_inference_data: pd.DataFrame,
+                       timeframe_dict: Dict,
+                       lag_list: List[int],
+                       lagged_feature_list: List[str],
+                       central_scenario: int) -> pd.DataFrame:
+    """Pipeline de features engineering temporels. Retourne le dataset prêt pour l'inférence du modèle.
+
+    Args:
+        raw_inference_data (pd.DataFrame): Dataset en sortie de la phase d'extraction
+        timeframe_dict (dict): Dictionnaire permettant de choisir les variables encodées cycliquement 
+            (ex : TIMEFRAME_DICT = {"month": 12, "hour": 24})
+        lag_list (list): Liste des décalages temporels (lags) appliqués aux variables laggées.
+        lagged_feature_list (list):  Liste des noms de variables sur lesquelles appliquer les lags.
+        central_scenario (int): Scénario central (id des coordonnées d'études)
+
+    Returns:
+        inference_data (pd.DataFrame): Dataset prêt pour l'inférence
+    """
+    logging.info("[INIT] Pipeline de transformation en cours")
+    
+    try:
+        # Renommage
+        df = col_scenario_rename(raw_inference_data, central_scenario)
+        
+        # Encodage cyclique
+        df = cyclical_features_encoding(df, timeframe_dict)
+        logging.info(f"Encodage cyclique effectué pour : {list(timeframe_dict.keys())}")
+
+        # Variables laggées 
+        df = lagged_ma_feature_encoding(df, lagged_feature_list, lag_list)
+        logging.info(f"Variables laggées créées pour les lags : {lag_list}")
+
+        # Nettoyage final
+        inference_data = df.dropna(subset=df.columns.difference(["solaire"]))
+        inference_data.index = inference_data.index.rename("date_heure")
+
+        return inference_data
+    
+    except Exception as e :
+        logging.exception("[ERROR] Interruption de la pipeline de transformation")
+        raise e
 # %%
