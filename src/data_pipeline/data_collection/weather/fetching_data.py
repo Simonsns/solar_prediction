@@ -12,7 +12,7 @@ from src.data_pipeline.data_processing.weather.preprocessing import (separate_ce
                                                                     set_time_index_drop_date_columns,
                                                                     compute_variable_dispersion, 
                                                                     concatenate_weather_data)
-#%%
+
 def fetch_hourly_weather_data(url: str, 
                                    	start_date: str, 
                                 	end_date: str, 
@@ -75,8 +75,7 @@ def fetch_hourly_weather_data(url: str,
 	except Exception as e:
 		logging.error(f"Erreur lors de la récupération des données météo : {e}")
 		raise
-
-#%%
+    
 def fetch_all_hourly_weather_runs(url: str, start_date: str, end_date: str, 
                                   variables: list, coordinates: gpd.GeoDataFrame) -> list:
     
@@ -89,13 +88,18 @@ def fetch_all_hourly_weather_runs(url: str, start_date: str, end_date: str,
 
     for i in tqdm(range(len(coordinates))):
         
-        df = fetch_hourly_weather_data(url, start_date, end_date, variables, lon[i], lat[i])
-        df.columns = [f"{col}_run_{i}" for col in df.columns]
-        time.sleep(10) # Gérer l'appel max par secondes
-        weather_df_list.append(df)
+        try:
+            df = fetch_hourly_weather_data(url, start_date, end_date, variables, lon[i], lat[i])
+            time.sleep(10) # 6 Fixed number par Open-météo (On aurait pu faire une intra-fonction avec tenacity
+            # mais le retry est déjà géré dans la fonction fetch_hourly_data)
+            df.columns = [f"{col}_run_{i}" for col in df.columns]
+            weather_df_list.append(df)
+        
+        except Exception as e:
+            logging.warning(f"Echec de l'extraction des coordonnées {i} avec l'Exception suivante :", e)
     
     return weather_df_list
-#%%
+
 def _fetch_weather_data(coordinates: gpd.GeoDataFrame,
                         start_date: str,
                         end_date: str,
@@ -114,7 +118,7 @@ def _fetch_weather_data(coordinates: gpd.GeoDataFrame,
     df_weather = concatenate_weather_data(df_cweather, df_dispersion)
 
     return df_weather
-#%%
+
 def fetch_historical_weather(production_data:pd.DataFrame, 
                              variables: List[str],
                              coordinates: gpd.GeoDataFrame, 

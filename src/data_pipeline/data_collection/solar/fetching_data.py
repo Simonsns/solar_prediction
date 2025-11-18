@@ -1,14 +1,37 @@
-#%% Librairies
+# Fonctions de fetching de la production solaire sur l'API RTE
+# author : simon.senegas
+# date : 18/11/2025
 
+# Librairies
+#API 
 import requests
+from tenacity import (retry, stop_after_attempt, 
+                      wait_exponential, 
+                      retry_if_exception_type, 
+                      before_sleep_log)
+
+#Gestion de daya
 import pandas as pd
 from typing import Dict, List
 import logging
 from io import BytesIO
 from json import JSONDecodeError
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-#%%
+# Configuration et Gestion des exceptions 
+RETRY_LOGGER = logging.getLogger('solar_api_retry')
+RETRY_LOGGER.setLevel(logging.WARNING) 
+
+V_EXCEPTIONS = (
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.HTTPError,  #5xx et 429
+)
+
+@retry(stop=stop_after_attempt(10),
+       wait=wait_exponential(multiplier=2, min=10, max=120),
+       retry=retry_if_exception_type(V_EXCEPTIONS),
+    before_sleep=before_sleep_log(RETRY_LOGGER, logging.WARNING, exc_info=True)
+)
 def fetch_solar_data(url: str, 
                      columns: List[str] | None = None, 
                      params: Dict | None = None,
@@ -23,26 +46,22 @@ def fetch_solar_data(url: str,
     Returns:
         data (dict): données sous forme de dictionnaire
     """
+
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+
     try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
+        json_data = response.json()
+        data = pd.DataFrame(data=(json_data.get("results", [])), columns=columns)
+        logging.info("Data solaire téléchargée avec succès au format JSON")
 
-        try:
-            json_data = response.json()
-            data = pd.DataFrame(data=(json_data.get("results", [])), columns=columns)
-            logging.info("Data solaire téléchargée avec succès au format JSON")
+    except (ValueError, JSONDecodeError):
+        logging.debug("Réponse non JSON, lecture en Parquet")
+        data = pd.read_parquet(BytesIO(response.content), columns=columns)
+        logging.info("Data solaire téléchargée avec succès au format Parquet")
 
-        except (ValueError, JSONDecodeError):
-            logging.debug("Réponse non JSON, lecture en Parquet")
-            data = pd.read_parquet(BytesIO(response.content), columns=columns)
-            logging.info("Data solaire téléchargée avec succès au format Parquet")
+    return data
 
-        return data
-
-    except requests.RequestException as e:
-        logging.error(f"Erreur lors de la requête API: {e}")
-        raise
-#%%
 def fetch_inference_solar_data(url: str,  n_records: int, 
 							   limit: int = 96, 
 							   columns: List[str] | None = None, 
@@ -73,16 +92,23 @@ def fetch_inference_solar_data(url: str,  n_records: int,
         batch_limit = min(limit, remaining)
         local_params.update({"offset": offset, "limit": batch_limit})
         
+        try:
         # Fetching
-        df = fetch_solar_data(url=url, 
-                                columns=columns, 
-                                params=local_params)
+            df = fetch_solar_data(url=url, 
+                                    columns=columns, 
+                                    params=local_params)
 
-        records.append(df)
-        logging.debug(f"Batch récupéré : {df.shape[0]} lignes (offset={offset})")
+            records.append(df)
+            logging.debug(f"Batch récupéré : {df.shape[0]} lignes (offset={offset})")
+        
+        except requests.RequestException as e:
+            logging.error(f"échec de l'extract API RTE pour le batch (offset={offset}). Motif: {type(e).__name__} - {e}")
         
         # Update params
         offset += limit 
+    
+    if not records: 
+        logging.warning("Aucune donnée de production solaire n'a pu être récupérée de l'API RTE")
+        return pd.DataFrame()
 
     return pd.concat(records, axis=0, ignore_index=True)
-# %%
