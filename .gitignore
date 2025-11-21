@@ -16,6 +16,7 @@ build
 
 # idea base
 idea.py
+torch_test.py
 
 # data
 data
