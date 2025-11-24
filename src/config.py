@@ -36,12 +36,11 @@ API_WEATHER_VARIABLES = [
 ########### Paramètres Feature engineering ############
 
 CENTRAL_SCENARIO = 13 # Scénario barycentrique de toute la capacité solaire régionale
-LAG_LIST = [24, 32, 48] # Périodes de décalage des séries temporelles
-
+LAG_LIST = [1, 6, 24, 48] # Périodes de décalage des séries temporelles
+WINDOW_LIST = [6, 24, 48]
 LAGGED_FEATURE_LIST = [
     'solaire',
     'global_tilted_irradiance', 
-    'relative_humidity_2m', 
     'temperature_2m', 
     'wind_speed_10m'
 ]
