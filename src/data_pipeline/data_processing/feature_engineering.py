@@ -42,9 +42,10 @@ def cyclical_features_encoding(X: pd.DataFrame, timeframe_dict: Dict[str, int]) 
 
     return df
 
-def lagged_ma_feature_encoding(df: pd.DataFrame, 
-                               feature_list: list[str], 
-                               lag_list: list[int]) -> pd.DataFrame:
+def encoding_multihorizons_features(df: pd.DataFrame, 
+                                    feature_list: list[str], 
+                                    lag_list: list[int], 
+                                    window_list: list[int]) -> pd.DataFrame:
     
     """Prends en entrée un DataFrame df indexée temporellement avec une liste de features (feature_list) et de lags (lag_list), et renvoie le dataframe df munie des features laggées et
     d'une moyenne mobile sur les mêmes lags.
@@ -59,12 +60,20 @@ def lagged_ma_feature_encoding(df: pd.DataFrame,
     """
 
     for col in feature_list:
+        
         for lag in lag_list:
             #Feature laggée
             df[f"{col}_lag_{lag}"] = df[col].shift(lag)
+            
+        for window in window_list:
+
             #Moyenne mobile sur lag période
-            if col != "solaire":
-                df[f"{col}_ma_{lag}"] = df[col].rolling(window=lag).mean()
+            df[f"{col}_ma_{window}"] = df[col].rolling(window=window).mean()
+
+            #Ramp
+            df[f"{col}_ramp_{window}"] = df[col].shift(1) - df[col].shift(window+1)
+
+    df = df.dropna()
     
     return df
 
@@ -97,6 +106,7 @@ def full_raw_inference_dataset(production_data: pd.DataFrame,
 def transform_pipeline(raw_inference_data: pd.DataFrame,
                        timeframe_dict: Dict,
                        lag_list: List[int],
+                       window_list: List[int],
                        lagged_feature_list: List[str],
                        central_scenario: int) -> pd.DataFrame:
     """Pipeline de features engineering temporels. Retourne le dataset prêt pour l'inférence du modèle.
@@ -123,7 +133,7 @@ def transform_pipeline(raw_inference_data: pd.DataFrame,
         logging.info(f"Encodage cyclique effectué pour : {list(timeframe_dict.keys())}")
 
         # Variables laggées 
-        df = lagged_ma_feature_encoding(df, lagged_feature_list, lag_list)
+        df = encoding_multihorizons_features(df, lagged_feature_list, lag_list, window_list)
         logging.info(f"Variables laggées créées pour les lags : {lag_list}")
 
         # Nettoyage final

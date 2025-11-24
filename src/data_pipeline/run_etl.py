@@ -193,7 +193,7 @@ def load_data(inference_data: pd.DataFrame, supabase_url: str,
     logger.info(f"{len(inference_data)} enregistrements chargés avec succès")
 
 
-def run_etl() -> None:
+def run_etl() -> None: #TODO Faire une configuration propre avec Pydantic
     """
     Exécute le pipeline ETL complet pour la prédiction de production solaire.
     
@@ -225,6 +225,7 @@ def run_etl() -> None:
         lagged_feature_list = config.LAGGED_FEATURE_LIST
         timeframe_dict = config.TIMEFRAME_DICT
         lag_list = config.LAG_LIST
+        window_list = config.WINDOW_LIST
         
         # Paramètres API
         variables = config.API_WEATHER_VARIABLES
@@ -291,6 +292,7 @@ def run_etl() -> None:
         inference_data = transform_pipeline(raw_inference_data=raw_inference_data,
                                             timeframe_dict=timeframe_dict,
                                             lag_list=lag_list,
+                                            window_list=window_list,
                                             lagged_feature_list=lagged_feature_list,
                                             central_scenario=central_scenario)
         
