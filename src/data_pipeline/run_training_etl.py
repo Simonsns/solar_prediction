@@ -72,7 +72,7 @@ def load_environment_variables() -> Dict[str, str]:
         "API_SOLAR_KEY",
         "API_CAPACITY_KEY",
         "API_WEATHER_KEY",
-        "API_FORECAST_WEATHER_KEY",
+        "API_HIST_FORECAST_WEATHER_KEY",
         "SUPABASE_URL",
         "SUPABASE_KEY"
     ]

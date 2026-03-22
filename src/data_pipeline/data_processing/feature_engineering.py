@@ -1,12 +1,12 @@
 # Fichier contenant l'ensemble des fonctions utilisables de façon commune
 # author : simon.senegas
-# last_date : 12/11/2025
-#%%
+# last_date : 07/12/2025
+
 import pandas as pd
 import logging
 import numpy as np
-from typing import Dict, List, Optional
-#%%
+from typing import Dict, List, Iterable
+
 def col_scenario_rename(df: pd.DataFrame, run_filter: int) -> pd.DataFrame:
     """Retourne un dataframe avec les colonnes sans chiffre "_run_X"""
     
@@ -17,7 +17,6 @@ def col_scenario_rename(df: pd.DataFrame, run_filter: int) -> pd.DataFrame:
 def filter_covariable(df: pd.DataFrame, filter_col_list: list[str]) -> pd.DataFrame:
     """Filtre les covariables selon une liste données"""
     return df[[col for col in df.columns if any(f in col for f in filter_col_list)]]
-
 
 def cyclical_features_encoding(X: pd.DataFrame, timeframe_dict: Dict[str, int]) -> pd.DataFrame:
     
@@ -43,39 +42,39 @@ def cyclical_features_encoding(X: pd.DataFrame, timeframe_dict: Dict[str, int]) 
     return df
 
 def encoding_multihorizons_features(df: pd.DataFrame, 
-                                    feature_list: list[str], 
+                                    feature_list: Iterable[str], 
                                     lag_list: list[int], 
                                     window_list: list[int]) -> pd.DataFrame:
     
-    """Prends en entrée un DataFrame df indexée temporellement avec une liste de features (feature_list) et de lags (lag_list), et renvoie le dataframe df munie des features laggées et
-    d'une moyenne mobile sur les mêmes lags.
+    """Prends en entrée un DataFrame df indexée temporellement avec une liste de features (feature_list) 
+    et de lags (lag_list), et renvoie le dataframe df munie des features laggées, volatilité, ramp 
+    et d'une moyenne mobile selon des fenêtres (window_list).
 
     Args:
         df (pd.DataFrame): DataFrame indexé temporellement
-        feature_list (list[str]): Features (noms de colonnes du dataframe) que l'on veut retarder ou lisser.
+        feature_list (Iterable[str]): Features (noms de colonnes du dataframe) que l'on veut retarder ou lisser.
         lag_list (list[int]): Liste de lags à imputer
+        window_list (list[int]): Liste de fenêtre pour les variables glissantes (ramp, moyenne, volatilité)
 
     Returns:
         pd.DataFrame: Retourne le DataFrame munie des features laggées et les moyennes mobiles associées
     """
 
+    new_cols = {}
+
     for col in feature_list:
         
         for lag in lag_list:
-            #Feature laggée
-            df[f"{col}_lag_{lag}"] = df[col].shift(lag)
-            
+            new_cols[f"{col}_lag_t-{lag}"] = df[col].shift(lag) #Feature laggée
+
         for window in window_list:
+            new_cols[f"{col}_ma_{window}"] = df[col].rolling(window=window, min_periods=1).mean() #Moyenne mobile
+            new_cols[f"{col}_volatility_{window}"] = df[col].rolling(window=window, min_periods=1).std() #Volatilité sur window
+            new_cols[f"{col}_ramp_{window}"] = df[col].shift(1) - df[col].shift(window+1) #Ramp sur window
 
-            #Moyenne mobile sur lag période
-            df[f"{col}_ma_{window}"] = df[col].rolling(window=window).mean()
-
-            #Ramp
-            df[f"{col}_ramp_{window}"] = df[col].shift(1) - df[col].shift(window+1)
-
-    df = df.dropna()
+    df_out = pd.concat([df, pd.DataFrame(data=new_cols)], axis=1)        
     
-    return df
+    return df_out
 
 def full_raw_inference_dataset(production_data: pd.DataFrame, 
                         historical_weather: pd.DataFrame, 
@@ -102,6 +101,36 @@ def full_raw_inference_dataset(production_data: pd.DataFrame,
     full_data = pd.concat([full_data, forecast_weather], axis=0).sort_index()
         
     return full_data
+
+def prepare_forecast_features(df: pd.DataFrame, 
+                                    feature_list: Iterable[str], 
+                                    lag_list: list[int],
+                                    delta_list: list[int]) -> pd.DataFrame:
+    
+    """Prends en entrée un DataFrame df indexée temporellement avec une liste de features (feature_list) 
+    et de lags (lag_list), et renvoie le dataframe df munie des features laggées et les deltas des 
+    features prévisionnelles.
+
+    Args:
+        df (pd.DataFrame): DataFrame indexé temporellement
+        feature_list (Iterable[str]): Features (noms de colonnes du dataframe) que l'on veut retarder ou lisser.
+        lag_list : liste d'entiers représentant les horizons pour lesquels créer des lags et deltas.
+
+    Returns:
+        pd.DataFrame: Retourne le DataFrame avec exclusivement les features laggées et les deltas associés
+    """
+
+    new_cols = {}
+
+    for col in feature_list:
+        
+        for lag in lag_list:
+            new_cols[f"{col}_t+{lag}"] = df[col].shift(-lag)                          #Feature laggée
+        
+        for delta in delta_list:   
+            new_cols[f"{col}_delta_t+{delta}_t"] = df[col].shift(-delta) - df[col]    # delta entre lag et valeur actuelle
+
+    return pd.DataFrame(data=new_cols, index=df.index)
 
 def transform_pipeline(raw_inference_data: pd.DataFrame,
                        timeframe_dict: Dict,
@@ -137,7 +166,8 @@ def transform_pipeline(raw_inference_data: pd.DataFrame,
         logging.info(f"Variables laggées créées pour les lags : {lag_list}")
 
         # Nettoyage final
-        inference_data = df.dropna(subset=df.columns.difference(["solaire"]))
+        inference_data = df.copy()
+        inference_data = inference_data.dropna()
         inference_data.index = inference_data.index.rename("date_heure")
 
         return inference_data
@@ -145,4 +175,3 @@ def transform_pipeline(raw_inference_data: pd.DataFrame,
     except Exception as e :
         logging.exception("[ERROR] Interruption de la pipeline de transformation")
         raise e
-# %%

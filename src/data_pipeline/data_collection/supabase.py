@@ -23,7 +23,7 @@ def extract_coordinates_from_supabase(supabase_url: str, supabase_key: str, tabl
         gdf = gpd.GeoDataFrame(df, geometry="geometry")
 
     except Exception as e :
-        logging.warning("Erreur lors de l'import des coordonnées", e)
+        logging.warning("Erreur lors de l'import des coordonnées")
         raise
 
     return gdf
@@ -70,5 +70,5 @@ def refresh_supabase_inference_table(inference_dataset: pd.DataFrame,
         logging.info("Dataset d'inférence stocké sur Supabase")
     
     except Exception as e:
-        logging.warning("Dataset d'inférence non stocké sur Supabase", e)
+        logging.warning("Dataset d'inférence non stocké sur Supabase (erreur masquée)")
         raise

@@ -181,7 +181,7 @@ def fetch_forecast_weather(production_data: pd.DataFrame,
         production_data (pd.DataFrame): Données historiques de production énergétique.
         variables (List[str]): Liste des variables météorologiques à récupérer (ex. température, irradiance, vent).
         len_prev (int): Longueur de la prévision en heures.
-        coord_path (str): Chemin vers le fichier contenant les coordonnées géographiques.
+        coordinates (gpd.GeoDataFrame): GeoDataFrame contenant les coordonnées géographiques.
         forecast_weather_url (str): URL de la source des données météorologiques prévisionnelles.
 
     Returns:
@@ -210,6 +210,41 @@ def fetch_forecast_weather(production_data: pd.DataFrame,
     
     # Test
     assert len(df_weather) == len_prev, "La longueur des prévisions ne correspond pas à len_prev"
+    logging.info("[END] Données météos historiques stockées")
+
+    return df_weather
+
+def fetch_historical_forecast_weather(hist_forecast_start: str,
+                                    hist_forecast_end: str,
+                                    variables: List[str],
+							        coordinates: gpd.GeoDataFrame,
+                                    forecast_weather_url: str) -> pd.DataFrame:
+    """
+    Récupère et prépare les données météorologiques des prévisions historiques pour une période donnée.
+
+    La fonction télécharge les données historiques de prévision horaire, calcule les scénarios centraux 
+    et alternatifs, puis assemble un jeu de données prêt à être utilisé pour la modélisation 
+    de la production énergétique.
+
+    Args:
+        hist_forecast_start (str): Date de début de période étudiée au format %Y:%m%:%d.
+        hist_forecast_end (str): Date de fin de période étudiée au format %Y:%m%:%d (jour inclus).
+        variables (List[str]): Liste des variables météorologiques à récupérer (ex. température, irradiance, vent).
+        coordinates (gpd.GeoDataFrame): GeoDataFrame contenant les coordonnées géographiques.
+        forecast_weather_url (str): URL de la source des données météorologiques historiques prévisionnelles.
+
+    Returns:
+        pd.DataFrame: Données météorologiques prévisionnelles formatées et alignées temporellement.
+    
+    """
+    # Recherche des données prévisionnelles
+    logging.info("[INIT] Récupération des données météos prévisionnelles")
+    df_weather = _fetch_weather_data(coordinates,
+          							hist_forecast_start,
+                                    hist_forecast_end,
+                                    variables,
+                                    forecast_weather_url)
+    df_weather = df_weather.add_suffix("_forecast")
     logging.info("[END] Données météos historiques stockées")
 
     return df_weather

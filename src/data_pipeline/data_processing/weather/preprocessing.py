@@ -1,7 +1,7 @@
 import pandas as pd
 import logging
 #%%
-def separate_central_scenario(weather_df_list: list):
+def separate_central_scenario(weather_df_list: list) -> tuple:
     
     """Separe le scénario central (dernier élément de la liste) des autres dataframes"""
     
