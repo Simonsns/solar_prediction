@@ -4,8 +4,6 @@
 
 End-to-end MLOps pipeline for day-ahead solar power forecasting in the Occitanie region (France), using public RTE production data and Open-Meteo weather forecasts.
 
----
-
 ## Project Overview
 
 This project forecasts regional solar power production (MW) at hourly resolution for horizons t+1 to t+24, leveraging open data sources and a multi-model architecture. The pipeline covers the full ML lifecycle: data ingestion, feature engineering, model training, and automated inference with drift-based retraining.
@@ -16,8 +14,6 @@ This project forecasts regional solar power production (MW) at hourly resolution
 - Installed capacity: RTE API (used to normalize the target variable)
 
 **Spatial approach**: weather features are extracted at the barycentre of installed capacity per department, with spatial dispersion variables (min-max range, std) to capture regional heterogeneity without requiring a CNN.
-
----
 
 ## Repository Structure *(work in progress)*
 
@@ -41,8 +37,6 @@ solar_prediction/
 ├── logs/
 └── tests/                              # (in progress)
 ```
-
----
 
 ## Methodology
 
@@ -74,8 +68,6 @@ Solar production normalized by installed capacity (`solar_mw / chronique_capacit
 - Backtest walk-forward on the last 90 days (in progress)
 - Baseline comparison: naïve persistence (y_t = y_{t-24})
 
----
-
 ## MLOps Architecture
 
 ```
@@ -93,9 +85,7 @@ MLflow (HF Spaces)             ← experiment tracking
 GitHub Actions                 ← CI/CD (tests + deploy)
 ```
 
-**Storage**: Cloudflare R2 (S3-compatible, free tier) for model artefacts and predictions. Boto3 code is directly portable to AWS S3 by changing `endpoint_url`.
-
----
+**Storage**: Currently on Supabase. In the future : Cloudflare R2 (S3-compatible, free tier) for model artefacts and predictions. Boto3 code is directly portable to AWS S3 by changing `endpoint_url`.
 
 ## Current Status
 
@@ -114,8 +104,6 @@ GitHub Actions                 ← CI/CD (tests + deploy)
 | MLflow tracking | To do |
 | CI/CD GitHub Actions | To do |
 
----
-
 ## Key Technical Choices
 
 **Why 24 separate LightGBM models?** Each horizon has a different feature importance structure — autoregressions dominate at t+1 while weather forecasts become critical at t+24. A single multi-output model would force the same HP across all horizons, losing this horizon-specific signal.
@@ -123,8 +111,6 @@ GitHub Actions                 ← CI/CD (tests + deploy)
 **Why normalize by installed capacity?** Solar production has a long-term upward trend driven by new installations (~+15% over 2023–2025 in Occitanie). Normalizing removes this non-stationarity without differencing, preserving the interpretability of the target.
 
 **Why spatial dispersion features?** Cloud cover and DNI are highly heterogeneous across Occitanie's departments (altitude differences of 400m+, Mediterranean influence). Departmental min-max range and std capture this spatial variance without requiring a CNN.
-
----
 
 ## Requirements
 
