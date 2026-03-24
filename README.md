@@ -19,10 +19,17 @@ This project forecasts regional solar power production (MW) at hourly resolution
 
 ```
 solar_prediction/
+│
+├── data/
+│   ├── raw/                            # Raw data
+│   ├── external/                       # External data (from API)
+│   └── processed/                      # Training datasets, feature lists
+│
 ├── notebooks/
 │   ├── 01_data_exploration.ipynb       # EDA : STL/MSTL decomposition, ACF/PACF, CCF analysis
 │   ├── 02_feature_engineering.ipynb    # Cyclic encoding, lags, rolling windows, outlier guards
 │   └── 03_model_training.ipynb         # SARIMAX baseline, LightGBM multi-horizon, seq2seq LSTM
+│
 ├── src/
 │   ├── data_pipeline/
 │   │   ├── data_collection/
@@ -31,9 +38,8 @@ solar_prediction/
 │   │   ├── data_processing/            # Preprocessing, feature engineering
 │   │   └── run_etl.py                  # Orchestrated ETL pipeline
 │   └── config.py
-├── data/
-│   ├── processed/                      # Training datasets, feature lists
-│   └── models/                         # Serialized model bundles
+│
+├── models/mlflow_artifacts             # Serialized model bundles 
 ├── logs/
 └── tests/                              # (in progress)
 ```
