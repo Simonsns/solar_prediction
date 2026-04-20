@@ -1,56 +1,51 @@
+#%%
 from datetime import datetime, timedelta
+from pydantic import Field, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import List, Dict, Any
 
-# --- PARAMÈTRES GÉNÉRAUX D'EXÉCUTION ---
-TIME_AGREGATION = "1h"
-REGION_CODE = 76
-N_HOURS_TO_FETCH = 99
+class SolarSettings(BaseSettings):
+    """Settings for inference and training pipeline"""
 
-# Variables temporelles
-DATE_START_CALC = datetime.now() - timedelta(hours=N_HOURS_TO_FETCH) 
-DATE_START_STR = DATE_START_CALC.strftime("%Y-%m-%d %H:%M:%S")
+    ### ENV
+    model_config = SettingsConfigDict(env_file='.env', 
+                                      extra="ignore")
 
-# Variables API RTE Production solaire en temps réel
-# Le script va chercher 99 heures de données agrégées (99 * 4 = 396 points)
-N_RECORDS = N_HOURS_TO_FETCH * 4 
-RTE_LIMIT = 96 # Limite de résultats par requête (à ajuster selon votre API)
-RTE_DEFAULT_PARAMS = {
-    "select": "code_insee_region, date, heure, date_heure, solaire",
-    "order_by": "date_heure",
-    "where": f"code_insee_region='{REGION_CODE}' AND date_heure >= '{DATE_START_STR}'"
-}
-LEN_PREV = 24 # Longueur de la fenêtre de prédiction
+    ### PARAMÈTRES GÉNÉRAUX D'EXÉCUTION
+    TIME_AGREGATION: str = "1h"
+    N_HOURS_TO_FETCH: int = Field(default=99, gt=0)
+    LEN_PREV: int = 24
+    CENTRAL_SCENARIO: int = 13 # Scénario barycentrique de toute la capacité solaire régionale
+    REGION_CODE: int = Field(default=76, gt=0) # Occitanie
 
-############# Paramètres API Open-météo ##############
+    # FEATURE ENGINEERING
+    LAG_LIST: List[int] = Field(default=[1, 6, 24, 48], min_length=1)
+    WINDOW_LIST: List[int] = Field(default = [6, 24, 48], min_length=1)
+    
+    # PARAMETRES API
+    API_WEATHER_VARIABLES: List[str] = Field(min_length=1)
+    LAGGED_FEATURE_LIST: List[str] = Field(min_length=1)
+    TIMEFRAME_DICT: Dict[str, int] = Field(min_length=1)
 
-API_WEATHER_VARIABLES = [
-    "temperature_2m", 
-    "relative_humidity_2m", 
-    "precipitation", 
-    "surface_pressure", 
-    "cloud_cover",
-    "wind_speed_10m", 
-    "wind_direction_10m", 
-    "global_tilted_irradiance"
-]
+    # DYNAMIC VARIABLES
+    @computed_field
+    @property
+    def DATE_START_CALC(self) -> datetime:
+        """Departure calcul at instanciation time"""
+        return datetime.now() - timedelta(hours=self.N_HOURS_TO_FETCH)
 
-########### Paramètres Feature engineering ############
+    @computed_field
+    @property
+    def DATE_START_STR(self) -> str:
+        """Time formatting of API Open-Meteo response"""
+        return self.DATE_START_CALC.strftime("%Y-%m-%d %H:%M:%S")
 
-CENTRAL_SCENARIO = 13 # Scénario barycentrique de toute la capacité solaire régionale
-LAG_LIST = [1, 6, 24, 48] # Périodes de décalage des séries temporelles
-WINDOW_LIST = [6, 24, 48]
-LAGGED_FEATURE_LIST = [
-    'solaire',
-    'global_tilted_irradiance', 
-    'temperature_2m', 
-    'wind_speed_10m'
-]
-
-TIMEFRAME_DICT = {
-    "month": 12, 
-    "hour": 24
-}
-
-################### Tables supabase ###########################
-
-COORD_TABLE = "COORD_TABLE"
-INFERENCE_TABLE = "INFERENCE_TABLE"
+    @computed_field
+    @property
+    def RTE_DEFAULT_PARAMS(self) -> Dict[str, Any]:
+        """Generates dynamically default rte parameters"""
+        return {
+            "select": "code_insee_region, date, heure, date_heure, solaire",
+            "order_by": "date_heure",
+            "where": f"code_insee_region='{self.REGION_CODE}' AND date_heure >= '{self.DATE_START_STR}'"
+        }
