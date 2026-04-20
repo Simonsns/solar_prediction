@@ -15,20 +15,18 @@ import pandas as pd
 import geopandas as gpd
 
 # Modules 
-from src import config
+from src.utils import config
 from src.data_pipeline.data_processing.solar.preprocessing import prepare_production_data
 from src.data_pipeline.data_collection.solar.fetching_data import (
     fetch_inference_solar_data,
     fetch_solar_data
 )
-from src.data_pipeline.data_processing.installed_solar_capacity.preprocessing import (
-    inference_installed_power_sum
-)
+
 from src.data_pipeline.data_collection.weather.fetching_data import (
     fetch_forecast_weather,
     fetch_historical_weather
 )
-from src.data_pipeline.data_processing.feature_engineering import (
+from src.data_pipeline.data_processing.feature_engine import (
     full_raw_inference_dataset,
     transform_pipeline
 )
