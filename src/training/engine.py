@@ -5,7 +5,7 @@
 import pandas as pd
 import numpy as np
 from math import inf
-from XXX import SolarDataProcessor
+from src.data_pipeline import processors
 
 # ML - DL
 from sklearn.model_selection import TimeSeriesSplit
@@ -46,7 +46,7 @@ def train_sarimax(X: pd.DataFrame, y: pd.Series,  nb_cv_splits: int, num_trials:
     # Initialisation
     folds = TimeSeriesSplit(n_splits=nb_cv_splits)
 
-    def objective_sarimax(trial) -> np.float64 :
+    def objective_sarimax(trial) -> Any[float] :
         """Prend en entrée un set d'hyperparamètres SARIMAX issus du sampler d'Optuna, 
         et retourne le RMSE associé.
 
@@ -88,7 +88,7 @@ def train_sarimax(X: pd.DataFrame, y: pd.Series,  nb_cv_splits: int, num_trials:
                 logging.info(f"Prédiction du modèle : {order}\n{seasonal_order}")
                 
                 # Prédictions sur validation
-                prediction_interval = fitted_model.get_prediction(start=y_val.index[0],
+                prediction_interval = fitted_model.get_prediction(start=y_val.index[0], # type: ignore
                                                           end=y_val.index[-1],
                                                           exog=X_val)
                 predictions = prediction_interval.predicted_mean
@@ -118,15 +118,6 @@ def train_sarimax(X: pd.DataFrame, y: pd.Series,  nb_cv_splits: int, num_trials:
 
 #################################################################### LGBM ############################################################################
 
-def prepare_horizon_data(X: pd.DataFrame, y: pd.Series, horizon: int) -> Tuple[pd.DataFrame, pd.Series]:
-    """Return shift + alignment for a given horizon"""
-    
-    # Init
-    y_shifted = y.shift(-horizon).dropna()
-    X_aligned = X.loc[y_shifted.index]
-
-    return X_aligned, y_shifted
-
 def train_lightgbm(X: pd.DataFrame, 
                    y: pd.Series, 
                    meteo_features: List[str],
@@ -152,7 +143,7 @@ def train_lightgbm(X: pd.DataFrame,
     # Métriques scorer et folds
     tscv = TimeSeriesSplit(gap=0, n_splits=nb_cv_splits)
 
-    def objective_lightgbm(trial) -> np.float64 :
+    def objective_lightgbm(trial) -> Any[float]:
         """Prend en entrée un set d'hyperparamètres LightGBM issus du sampler d'Optuna, 
         et retourne le RMSE associé.
 
@@ -183,7 +174,7 @@ def train_lightgbm(X: pd.DataFrame,
 
             # Model fit avec les bonnes valeurs
             # y normalization outer : La pipeline ne transforme pas la target
-            final_processor = SolarDataProcessor(meteo_features=meteo_features)
+            final_processor = processors.SolarDataProcessor(meteo_features=meteo_features)
             final_processor.fit(X_train, y_train)
             X_train_scaled = final_processor.transform(X=X_train)
             y_train_scaled = final_processor.transform_y(y=y_train)
@@ -239,7 +230,7 @@ def fit_best_model(X: pd.DataFrame,
     )
 
     # Model fit avec les bonnes valeurs
-    final_processor = SolarDataProcessor(
+    final_processor = processors.SolarDataProcessor(
         meteo_features=meteo_features, 
         selected_features=selected_features)
     
