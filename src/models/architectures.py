@@ -1,6 +1,7 @@
+### LSTM Seq2Seq Architecture
+
 import torch
 import torch.nn as nn
-from dataclasses import dataclass, field
 from typing import Tuple
 
 class Encoder(nn.Module):
@@ -95,25 +96,3 @@ class Seq2seq(nn.Module):
         predictions = self.decoder(x_future, h_n_norm, c_n_norm)
 
         return predictions
-    
-@dataclass
-class EarlyStopping:
-    """Early stopping avec patience sur la val loss."""
-
-    patience:  int     = 10
-    min_delta: float   = 1e-4
-    best_loss:   float = field(default=float("inf"), init=False)
-    counter:     int   = field(default=0,            init=False)
-    should_stop: bool  = field(default=False,        init=False)
-
-    def step(self, val_loss: float) -> bool:
-        """Retourne True if val_loss is stagnating"""
-        if val_loss < self.best_loss - self.min_delta:
-            self.best_loss = val_loss
-            self.counter   = 0
-        else:
-            self.counter += 1
-            if self.counter >= self.patience:
-                self.should_stop = True
-
-        return self.should_stop

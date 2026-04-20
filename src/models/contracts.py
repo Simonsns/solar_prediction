@@ -5,6 +5,7 @@ from typing import List, Dict, Optional, Any
 import mlflow
 import pandas as pd
 import torch.nn as nn
+import numpy as np
 
 # ---LGBM contract---
 @dataclass
@@ -19,8 +20,6 @@ class HorizonRunResult:
     best_rmse:    float
     best_params:  dict
     X_train:      pd.DataFrame
-
-    # --- Properties ---
 
     @property
     def n_features(self) -> int:
@@ -54,7 +53,7 @@ class HorizonRunResult:
     
     @property
     def signature(self):
-        return mlflow.models.infer_signature(
+        return mlflow.models.infer_signature( # type: ignore
             self.X_train,
             self.model.predict(self.X_train)
         )
@@ -80,7 +79,7 @@ class HorizonRunResult:
 # ---LSTM contract---
 @dataclass
 class LSTMRunResult:
-    """Data contract entre l'entraînement LSTM et MLflow"""
+    """Data contract between LSTM and MLflow"""
  
     # Params
     num_epochs:  int
@@ -112,22 +111,22 @@ class LSTMRunResult:
         }
  
     @property
-    def signature(self) -> mlflow.models.ModelSignature:
+    def signature(self) -> mlflow.models.ModelSignature: # type: ignore
         
         # Def features
         all_features = list(set(self.encoder_features + self.decoder_features))
-        input_cols = [mlflow.types.ColSpec("double", col) for col in all_features]
-        input_cols.append(mlflow.types.ColSpec("double", "solar_mw"))
+        input_cols = [mlflow.types.ColSpec("double", col) for col in all_features] # type: ignore
+        input_cols.append(mlflow.types.ColSpec("double", "solar_mw")) # type: ignore
         
         # Inputs cols
-        inputs = mlflow.types.Schema(input_cols)
+        inputs = mlflow.types.Schema(input_cols) # type: ignore
 
-        outputs = mlflow.types.Schema([
-            mlflow.types.TensorSpec(
-                type=np.dtype("float32"), 
+        outputs = mlflow.types.Schema([ # type: ignore
+            mlflow.types.TensorSpec( # type: ignore
+                type=np.dtype("float32"),  
                 shape=(-1, self.output_len), 
                 name="prediction_mw"
             )
         ])
 
-        return mlflow.models.ModelSignature(inputs=inputs, outputs=outputs)
+        return mlflow.models.ModelSignature(inputs=inputs, outputs=outputs) # type: ignore
