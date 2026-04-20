@@ -110,22 +110,23 @@ def to_dataloader(
         stride: int
         ) -> DataLoader:
     
-    """Construit un DataLoader Seq2Seq avec séparation encoder/decoder.
+        
+    """Creates a Seq2Seq DataLoader with separate encoder and decoder components.
     
     Args:
-        training_dataset: DataFrame complet des features
-        encoder_features: Features passées (autorégressives + cycliques) 
-        decoder_features: Features futures connues (météo + cycliques)
-        target: Série cible (solar_mw normalisé)
-        seq_length: Longueur séquence encodeur
-        seq_future_length: Longueur séquence décodeur (horizons)
-        batch_size: Taille des batchs
-        stride: Pas entre les fenêtres
-    
-    Returns:
-        DataLoader PyTorch
+        training_dataset: Complete DataFrame of features
+        encoder_features: Past features (autoregressive + cyclical) 
+        decoder_features: Known future features (weather + cyclical)
+        target: Target series (normalized solar_mw)
+        seq_length: Encoder sequence length
+        seq_future_length: Decoder sequence length (horizons)
+        batch_size: Batch size
+        stride: sequence step
 
-    """
+    Returns:
+        Dataloader: Inference Tensor
+  
+   """
 
     #Init
     L_total = training_dataset.shape[0]
