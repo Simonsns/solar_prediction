@@ -33,8 +33,6 @@ def compute_variable_dispersion(df: pd.DataFrame, variables: list) -> pd.DataFra
         df_result[f"{var}_delta_minmax"] = (data.max(axis=1) - data.min(axis=1)).round(4)
         df_result[f"{var}_std"] = data.std(axis=1).round(4)
 
-    logging.info("Traitement des variables météorologiques terminé")
-
     return df_result
 
 #%%

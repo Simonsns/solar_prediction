@@ -8,7 +8,7 @@ import logging
 import time
 from tqdm import tqdm
 from typing import List
-from src.data_pipeline.data_processing.weather.preprocessing import (separate_central_scenario, 
+from src.data_pipeline.data_processing.weather_preprocessing import (separate_central_scenario, 
                                                                     set_time_index_drop_date_columns,
                                                                     compute_variable_dispersion, 
                                                                     concatenate_weather_data)
