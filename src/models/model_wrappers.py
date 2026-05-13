@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from mlflow.pyfunc import PythonModel
+from mlflow.pyfunc.model import PythonModel
 from typing import Dict, List
 from sklearn.pipeline import Pipeline
 import torch.nn as nn
@@ -15,14 +15,15 @@ class MultiHorizonLGBMWrapper(PythonModel):
     def predict(self, model_input: pd.DataFrame): # type: ignore
 
         all_predictions = {}
-        future_index = model_input.index
 
-        for h in range(1, self.num_horizons+1):
-            key = f"h+{h}"
+        for horizon in range(1, self.num_horizons+1):
+            key = f'+{horizon}h'
             if key in self.models_dict:
+                if key not in self.models_dict:
+                    raise KeyError(f"Missing model for horizon {key}. Expected {self.num_horizons} models.")
                 pipe = self.models_dict[key]
                 norm_pred = pipe.predict(model_input)
-                all_predictions[key] = pipe.named_steps['processor'].inverse_transform_y(norm_pred, future_index)
+                all_predictions[key] = norm_pred
     
         return pd.DataFrame(all_predictions, index=model_input.index).clip(lower=0)
 
@@ -54,7 +55,7 @@ class SolarLSTMWrapper(PythonModel):
         self.model.eval()
         return self.model(enc, dec)
     
-    def predict(self, model_input: pd.DataFrame) -> np.ndarray:
+    def predict(self, model_input: pd.DataFrame) -> np.ndarray: # type: ignore
         
         """Prédit 24 horizons à partir d'une séquence encoder+decoder.
  

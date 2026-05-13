@@ -23,7 +23,7 @@ class HorizonRunResult:
 
     @property
     def n_features(self) -> int:
-        return self.X_train.shape[1]
+        return len(self.model.named_steps["selector"].final_selected_features_)
     
     @property
     def params_to_log(self) -> Dict[str, Optional[float|str]]:
