@@ -41,7 +41,7 @@ if __name__ == "__main__":
             "threshold": 0.95,
         },
         meteo_features=meteo_features,
-        experiment_name="LGBM_Model_1.6-founder_edition",
+        experiment_name="LGBM_Model_1.7-founder_edition",
         num_trials=25
     )
 
