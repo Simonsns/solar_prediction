@@ -49,7 +49,7 @@ solar_prediction/
 ## Methodology
 
 ### Target variable
-Solar production normalized by installed capacity (`solar_mw / chronique_capacity`), which removes the long-term upward trend due to new installations — confirmed by MSTL decomposition.
+Solar production normalized by 99th regional production quantile on 90 last_days (`solaire / q99`), which removes the long-term upward trend due to new installations — confirmed by MSTL decomposition.
 
 ### Feature engineering
 - **Cyclic encoding**: hour and month (sin/cos) to capture solar cycle seasonality
@@ -71,13 +71,13 @@ Solar production normalized by installed capacity (`solar_mw / chronique_capacit
 **Seq2seq architecture**: LSTM Encoder processes the past sequence (X_past), Decoder takes future weather forecasts (X_future) as input — physically motivated since Open-Meteo provides J+1 forecasts at inference time. LayerNorm on hidden states for training stability.
 
 ### Validation
-- Temporal train/test split (85/15), no shuffling
+- Temporal train/test split (80/20), no shuffling
 - Cross-validation for HP LGBM selection
 - OOT validation for LSTM model
-- Backtest walk-forward (stride 4h production control) on the test dataset 
+- Backtest walk-forward (stride 1h production control) on the test dataset 
 - Baseline comparison (skill score): naïve persistence (y_t = y_{t-24})
 
-## MLOps Architecture
+## MLOps Architecture (Monitoring in progress)
 
 ```
 Open-Meteo / RTE APIs
@@ -108,7 +108,7 @@ GitHub Actions                 ← CI/CD (tests + deploy)
 | Seq2seq LSTM | Done |
 | Test set evaluation + backtest | Done |
 | MLFlow server deployment (Supabase backend-store + S3 storage artifact store) | Done |
-| Pydantic config (BaseSettings) | To do |
+| Pydantic config (BaseSettings) | Done |
 | Serving (FastAPI) | To do |
 | Unit tests | To do |
 | CI/CD GitHub Actions | To do |
