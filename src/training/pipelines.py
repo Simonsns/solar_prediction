@@ -16,14 +16,15 @@ from src.models import contracts
 from models import architectures
 from src.utils import logging_utils
 
-
-def training_multioutput_lgbm_model(X: pd.DataFrame, 
-                                    y: pd.Series, 
-                                    meteo_features: List[str],
-                                    n_horizons: int, 
-                                    n_cv_splits: int, 
-                                    num_trials: Optional[int|None],
-                                    feature_sets: Dict[str, List[str]]) -> Dict[str, Pipeline]:
+def training_multioutput_lgbm_model(
+        X: pd.DataFrame, 
+        y: pd.Series, 
+        meteo_features: List[str],
+        n_horizons: int, 
+        n_cv_splits: int, 
+        num_trials: Optional[int|None],
+        selector_parameters: Dict[str, Any]
+        ) -> Dict[str, Pipeline]:
     
     """Train n horizons LGBM and log params, metrics and tags on cloud MLFlow server.
 
@@ -46,25 +47,27 @@ def training_multioutput_lgbm_model(X: pd.DataFrame,
         )
         
         # Features horizon group
-        if horizon <= 3:
+        if horizon <= 3: 
             set_name = "short"
-        elif horizon <= 12:
+            selector_parameters["horizons"] = [1, 3]
+        elif horizon <= 12: 
             set_name = "mid"
-        else:
+            selector_parameters["horizons"] = [3, 6, 12]
+        else: 
             set_name = "long"
+            selector_parameters["horizons"] = [12, 24]
 
         # Training 
-        features = feature_sets[set_name]
         model, best_rmse, best_params = engine.fit_best_model(
-            X=X_h[features], y=y_h,
+            X=X_h, y=y_h,
             meteo_features=meteo_features,
-            selected_features=features,
             n_cv_splits=n_cv_splits,
-            num_trials=num_trials
+            num_trials=num_trials, 
+            selector_parameters=selector_parameters
         )
 
         # Save for wrap
-        models_dict[f'h+{horizon}'] = model
+        models_dict[f'+{horizon}h'] = model
 
         # MLFlow
         logging.info(f'Best model fitted on {set_name}- Data contract loading')
@@ -74,7 +77,7 @@ def training_multioutput_lgbm_model(X: pd.DataFrame,
             best_rmse=best_rmse,
             best_params=best_params,
             model=model,
-            X_train=X_h[features]
+            X_train=X_h
         )
 
         with mlflow.start_run(run_name=f"h+{horizon}_{set_name}", nested=True):

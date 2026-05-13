@@ -122,7 +122,8 @@ def train_lightgbm(X: pd.DataFrame,
                    y: pd.Series, 
                    meteo_features: List[str],
                    nb_cv_splits: int,
-                   num_trials: Optional[int|None]
+                   num_trials: Optional[int|None],
+                   selector_parameters: Dict[str, Any]
                    ) -> Tuple[float, Dict[Any, Any]]:
     
     """Entrainement d'un modèle LightGBM avec nombre d'essais pour optimisation.
@@ -140,10 +141,18 @@ def train_lightgbm(X: pd.DataFrame,
         et ses hyperparamètres optimaux (dict_best_params)
     """
 
-    # Métriques scorer et folds
+    # Folds
     tscv = TimeSeriesSplit(gap=0, n_splits=nb_cv_splits)
+    
+    # Selector fit
+    final_processor = processors.SolarDataProcessor(meteo_features=meteo_features)
+    selector = processors.LGBMFeatureSelector(**selector_parameters)
+    final_processor.fit(X, y)
+    X_scaled = final_processor.transform(X=X)
+    y_scaled = final_processor.transform_y(y=y)
+    selector.fit(X_scaled, y_scaled)
 
-    def objective_lightgbm(trial) -> Any[float]:
+    def objective_lightgbm(trial) -> np.float64 :
         """Prend en entrée un set d'hyperparamètres LightGBM issus du sampler d'Optuna, 
         et retourne le RMSE associé.
 
@@ -154,7 +163,7 @@ def train_lightgbm(X: pd.DataFrame,
             rmse (np.float64): Racine carrée de l'erreur quadratique moyenne du modèle
         """
         
-        # HP
+        # Init
         params = {
             "num_leaves" : trial.suggest_int("num_leaves", 10, 100),
             "learning_rate" : trial.suggest_float("learning_rate", 0.005, 0.2, log=True),
@@ -164,28 +173,28 @@ def train_lightgbm(X: pd.DataFrame,
             "verbosity" : -1,
             "random_state": 42
         }
-
-        
-        # Cross validation manuelle car cross_val_score ne gère pas inverse_transform de y
         scores = []
+
         for train_idx, val_idx in tscv.split(X):
             X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
             y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
-            # Model fit avec les bonnes valeurs
+            # 1 - Preprocessing
             # y normalization outer : La pipeline ne transforme pas la target
             final_processor = processors.SolarDataProcessor(meteo_features=meteo_features)
             final_processor.fit(X_train, y_train)
             X_train_scaled = final_processor.transform(X=X_train)
             y_train_scaled = final_processor.transform_y(y=y_train)
 
-            # Model fit
+            # 2 - Model fit on selected_features
             final_model = lgb.LGBMRegressor(**params)
-            final_model.fit(X_train_scaled, y_train_scaled)
+            X_train_final = selector.transform(X_train_scaled)
+            final_model.fit(X_train_final, y_train_scaled)
             
-            # Pipeline already fitted
+            # 3 - Pipeline already fitted
             pipeline = Pipeline([
             ('processor', final_processor),
+            ('selector', selector),
             ('model', final_model)
         ])
         
@@ -197,7 +206,7 @@ def train_lightgbm(X: pd.DataFrame,
             
             scores.append(rmse(y_true=y_val, y_pred=y_pred))
 
-        return np.mean(scores)
+        return np.mean(scores) # type: ignore
     
     # Recherche des HP et prédiction
     optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -211,40 +220,48 @@ def train_lightgbm(X: pd.DataFrame,
 
     return study.best_value, study.best_params
 
-def fit_best_model(X: pd.DataFrame, 
-                   y: pd.Series, 
-                   meteo_features: List[str],
-                   selected_features: List[str],
-                   n_cv_splits: int, 
-                   num_trials: Optional[int|None]) -> Tuple[Pipeline, float, dict]:
+def fit_best_model(
+        X: pd.DataFrame, 
+        y: pd.Series, 
+        meteo_features: List[str],
+        n_cv_splits: int, 
+        num_trials: Optional[int|None],
+        selector_parameters:  Dict[str, Any],
+        ) -> Tuple[Pipeline, float, dict]:
     """
     Return (model, best_rmse, best_params).
     """
     
-    # HP Searching
+    # 1 - HP Searching
     best_rmse, best_params = train_lightgbm(
         X=X, y=y,
         meteo_features=meteo_features,
         nb_cv_splits=n_cv_splits,
         num_trials=num_trials,
+        selector_parameters=selector_parameters
     )
 
-    # Model fit avec les bonnes valeurs
-    final_processor = processors.SolarDataProcessor(
-        meteo_features=meteo_features, 
-        selected_features=selected_features)
-    
+    # 2 - Scaler fit and transform
+    final_processor = processors.SolarDataProcessor(meteo_features=meteo_features)
     final_processor.fit(X, y)
-    X_train_scaled = final_processor.transform(X=X)
-    y_train_scaled = final_processor.transform_y(y=y)
+    X_scaled = final_processor.transform(X=X)
+    y_scaled = final_processor.transform_y(y=y)
+
+    # 3 - Selector fit
+    final_selector = processors.LGBMFeatureSelector(**selector_parameters)
+    final_selector.fit(X=X_scaled, y=y_scaled)
+
+    # 3bis - Final feature reduction
+    X_final_input = final_selector.transform(X_scaled)
     
-    # Fit model
+    # 4 - Fit model
     final_model = lgb.LGBMRegressor(**best_params, verbosity=-1, random_state=42)
-    final_model.fit(X_train_scaled, y_train_scaled)
+    final_model.fit(X_final_input, y_scaled)
 
     # Pipeline already fitted
     pipeline = Pipeline([
     ('processor', final_processor),
+    ('selector', final_selector),
     ('model', final_model)
     ])
 
