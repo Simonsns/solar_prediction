@@ -41,10 +41,11 @@ def cyclical_features_encoding(X: pd.DataFrame, timeframe_dict: Dict[str, int]) 
 
     return df
 
-def encoding_multihorizons_features(df: pd.DataFrame, 
-                                    feature_list: Iterable[str], 
-                                    lag_list: list[int], 
-                                    window_list: list[int]) -> pd.DataFrame:
+def prepare_past_features(df: pd.DataFrame, 
+                        target: pd.DataFrame,
+                        feature_list: Iterable[str], 
+                        lag_list: list[int], 
+                        window_list: list[int]) -> pd.DataFrame:
     
     """Prends en entrée un DataFrame df indexée temporellement avec une liste de features (feature_list) 
     et de lags (lag_list), et renvoie le dataframe df munie des features laggées, volatilité, ramp 
@@ -61,46 +62,19 @@ def encoding_multihorizons_features(df: pd.DataFrame,
     """
 
     new_cols = {}
+    past_data = pd.merge(df, target, left_index=True, right_index=True)
 
     for col in feature_list:
         
         for lag in lag_list:
-            new_cols[f"{col}_lag_t-{lag}"] = df[col].shift(lag) #Feature laggée
+            new_cols[f"{col}_lag_t-{lag}"] = past_data[col].shift(lag) #Feature laggée
 
         for window in window_list:
-            new_cols[f"{col}_ma_{window}"] = df[col].rolling(window=window, min_periods=1).mean() #Moyenne mobile
-            new_cols[f"{col}_volatility_{window}"] = df[col].rolling(window=window, min_periods=1).std() #Volatilité sur window
-            new_cols[f"{col}_ramp_{window}"] = df[col].shift(1) - df[col].shift(window+1) #Ramp sur window
-
-    df_out = pd.concat([df, pd.DataFrame(data=new_cols)], axis=1)        
+            new_cols[f"{col}_ma_{window}"] = past_data[col].shift(1).rolling(window=window, min_periods=1).mean() #Moyenne mobile
+            new_cols[f"{col}_volatility_{window}"] = past_data[col].shift(1).rolling(window=window, min_periods=1).std() #Volatilité sur window
+            new_cols[f"{col}_ramp_{window}"] = past_data[col].shift(1) - past_data[col].shift(window+1) #Ramp sur window
     
-    return df_out
-
-def full_raw_inference_dataset(production_data: pd.DataFrame, 
-                        historical_weather: pd.DataFrame, 
-                        forecast_weather: pd.DataFrame, 
-                        sum_capacity: np.float64) -> pd.DataFrame: 
-    """
-    Construit un jeu de données complet pour l’inférence en combinant les données de production,
-    les données météorologiques historiques et les prévisions météorologiques.
-
-    La fonction fusionne d'abord les données de production et de météo historique selon leur index temporel,
-    puis concatène les prévisions météo pour produire un ensemble continu prêt à être feature engineer.
-
-    Args:
-        production_data (pd.DataFrame): Données historiques de production énergétique.
-        historical_weather (pd.DataFrame): Données météorologiques historiques alignées temporellement.
-        forecast_weather (pd.DataFrame): Données météorologiques prévisionnelles.
-
-    Returns:
-        pd.DataFrame: Jeu de données complet fusionnant historique et prévisions, indexé temporellement.
-    """
-
-    production_data.loc[:, "solaire"] = production_data.loc[:, "solaire"]/sum_capacity
-    full_data = pd.merge(production_data, historical_weather, left_index=True, right_index=True)
-    full_data = pd.concat([full_data, forecast_weather], axis=0).sort_index()
-        
-    return full_data
+    return pd.concat([past_data, pd.DataFrame(data=new_cols)], axis=1)       
 
 def prepare_forecast_features(df: pd.DataFrame, 
                                     feature_list: Iterable[str], 
@@ -121,23 +95,21 @@ def prepare_forecast_features(df: pd.DataFrame,
     """
 
     new_cols = {}
+    df_copy = df.copy()
 
     for col in feature_list:
         
         for lag in lag_list:
-            new_cols[f"{col}_t+{lag}"] = df[col].shift(-lag)                          #Feature laggée
+            new_cols[f"{col}_t+{lag}"] = df_copy[col].shift(-lag)                          #Feature laggée
         
         for delta in delta_list:   
-            new_cols[f"{col}_delta_t+{delta}_t"] = df[col].shift(-delta) - df[col]    # delta entre lag et valeur actuelle
+            new_cols[f"{col}_delta_t+{delta}_t"] = df_copy[col].shift(-delta) - df_copy[col]    # delta entre lag et valeur actuelle
 
-    return pd.DataFrame(data=new_cols, index=df.index)
+    return pd.concat([df, pd.DataFrame(data=new_cols)], axis=1)
 
-def transform_pipeline(raw_inference_data: pd.DataFrame,
-                       timeframe_dict: Dict,
-                       lag_list: List[int],
-                       window_list: List[int],
-                       lagged_feature_list: List[str],
-                       central_scenario: int) -> pd.DataFrame:
+
+def transform_pipeline(inference_data: pd.DataFrame,
+                       timeframe_dict: Dict) -> pd.DataFrame:
     """Pipeline de features engineering temporels. Retourne le dataset prêt pour l'inférence du modèle.
 
     Args:
@@ -151,26 +123,19 @@ def transform_pipeline(raw_inference_data: pd.DataFrame,
     Returns:
         inference_data (pd.DataFrame): Dataset prêt pour l'inférence
     """
-    logging.info("[INIT] Pipeline de transformation en cours")
     
-    try:
-        # Renommage
-        df = col_scenario_rename(raw_inference_data, central_scenario)
-        
+    # Init
+    df = inference_data.copy()
+    
+    try: 
         # Encodage cyclique
         df = cyclical_features_encoding(df, timeframe_dict)
         logging.info(f"Encodage cyclique effectué pour : {list(timeframe_dict.keys())}")
 
-        # Variables laggées 
-        df = encoding_multihorizons_features(df, lagged_feature_list, lag_list, window_list)
-        logging.info(f"Variables laggées créées pour les lags : {lag_list}")
-
         # Nettoyage final
-        inference_data = df.copy()
-        inference_data = inference_data.dropna()
-        inference_data.index = inference_data.index.rename("date_heure")
+        df.index = df.index.rename("date_heure")
 
-        return inference_data
+        return df
     
     except Exception as e :
         logging.exception("[ERROR] Interruption de la pipeline de transformation")

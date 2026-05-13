@@ -17,9 +17,6 @@ import logging
 from io import BytesIO
 from json import JSONDecodeError
 
-# Configuration et Gestion des exceptions 
-RETRY_LOGGER = logging.getLogger('solar_api_retry')
-RETRY_LOGGER.setLevel(logging.WARNING) 
 
 V_EXCEPTIONS = (
     requests.exceptions.ConnectionError,
@@ -29,9 +26,7 @@ V_EXCEPTIONS = (
 
 @retry(stop=stop_after_attempt(10),
        wait=wait_exponential(multiplier=2, min=10, max=120),
-       retry=retry_if_exception_type(V_EXCEPTIONS),
-    before_sleep=before_sleep_log(RETRY_LOGGER, logging.WARNING, exc_info=True)
-)
+       retry=retry_if_exception_type(V_EXCEPTIONS))
 def fetch_solar_data(url: str, 
                      columns: List[str] | None = None, 
                      params: Dict | None = None,

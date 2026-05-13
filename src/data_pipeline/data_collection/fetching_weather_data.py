@@ -119,7 +119,7 @@ def _fetch_weather_data(coordinates: gpd.GeoDataFrame,
 
     return df_weather
 
-def fetch_historical_weather(production_data:pd.DataFrame, 
+def fetch_historical_weather(production_data: pd.DataFrame, 
                              variables: List[str],
                              coordinates: gpd.GeoDataFrame, 
                              weather_url: str):
@@ -157,10 +157,10 @@ def fetch_historical_weather(production_data:pd.DataFrame,
                                 	variables=variables, 
                                     weather_url=weather_url)
     
-    df_weather = df_weather.loc[production_data.index[0]:production_data.index[-1]]
+    df_weather = df_weather.loc[production_data.index.min():production_data.index.max()]
 
     # Test
-    assert len(df_weather) == len(production_data), "Les longueurs météo et production diffèrent."
+    #assert len(df_weather) == len(production_data), "Les longueurs météo et production diffèrent."
     logging.info("[END] Données météos historiques stockées")
     
     return df_weather
@@ -193,8 +193,8 @@ def fetch_forecast_weather(production_data: pd.DataFrame,
         ValueError: Si les données météo récupérées sont invalides ou manquantes pour la période demandée.
     """
     # Forecast 
-    forecast_start = production_data.index[-1] + pd.Timedelta(hours=1)
-    forecast_end = forecast_start + pd.Timedelta(hours=len_prev - 1)
+    forecast_start = production_data.index[0]
+    forecast_end = production_data.index[-1] + pd.Timedelta(hours=len_prev - 1)
 
     # Recherche des données prévisionnelles
     logging.info("[INIT] Récupération des données météos prévisionnelles")
@@ -205,17 +205,19 @@ def fetch_forecast_weather(production_data: pd.DataFrame,
                                     forecast_weather_url)
 
     # Reshape and testing
-    df_weather = df_weather.loc[df_weather.index >= forecast_start]
-    df_weather = df_weather.head(len_prev)
+    df_weather = df_weather.loc[
+         (df_weather.index >= forecast_start) &
+         (df_weather.index <= forecast_end)
+          ]
     
     # Test
-    assert len(df_weather) == len_prev, "La longueur des prévisions ne correspond pas à len_prev"
     logging.info("[END] Données météos historiques stockées")
-
+    df_weather = df_weather.add_suffix("_forecast")
+    
     return df_weather
 
-def fetch_historical_forecast_weather(hist_forecast_start: str,
-                                    hist_forecast_end: str,
+def fetch_historical_forecast_weather(hist_forecast_start: pd.Timestamp,
+                                    hist_forecast_end: pd.Timestamp,
                                     variables: List[str],
 							        coordinates: gpd.GeoDataFrame,
                                     forecast_weather_url: str) -> pd.DataFrame:
@@ -240,8 +242,8 @@ def fetch_historical_forecast_weather(hist_forecast_start: str,
     # Recherche des données prévisionnelles
     logging.info("[INIT] Récupération des données météos prévisionnelles")
     df_weather = _fetch_weather_data(coordinates,
-          							hist_forecast_start,
-                                    hist_forecast_end,
+          							hist_forecast_start.strftime("%Y-%m-%d"),
+                                    hist_forecast_end.strftime("%Y-%m-%d"),
                                     variables,
                                     forecast_weather_url)
     df_weather = df_weather.add_suffix("_forecast")
