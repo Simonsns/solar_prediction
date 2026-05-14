@@ -5,7 +5,7 @@
 import pandas as pd
 import numpy as np
 from math import inf
-from src.data_pipeline import processors
+from src.etl import processors
 
 # ML - DL
 from sklearn.model_selection import TimeSeriesSplit

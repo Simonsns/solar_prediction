@@ -16,7 +16,7 @@ from sklearn.pipeline import Pipeline
 from optuna.pruners import MedianPruner
 
 # Custom modules
-from src.data_pipeline import processors
+from src.etl import processors
 from src.utils.config import SolarSettings
 from src.models import contracts, model_wrappers
 from src.utils import metrics

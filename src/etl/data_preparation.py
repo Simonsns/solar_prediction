@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from src.data_pipeline import processors
+from src.etl import processors
 
 # Utils
 from typing import Tuple, List, Any

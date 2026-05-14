@@ -10,7 +10,7 @@ import mlflow
 from typing import Optional, List, Dict, Any
 
 # Functions
-from src.data_pipeline import data_preparation
+from src.etl import data_preparation
 from src.training import engine
 from src.models import contracts
 from models import architectures

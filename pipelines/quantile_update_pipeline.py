@@ -1,8 +1,8 @@
 # Modules 
-from src.data_pipeline import schemas
+from src.etl import schemas
 from src.utils.config import SolarSettings
-from src.data_pipeline.data_processing import solar_preprocessing
-from src.data_pipeline.data_collection import fetching_solar_data
+from src.etl.data_processing import solar_preprocessing
+from src.etl.data_collection import fetching_solar_data
 from datetime import datetime
 from supabase import create_client, Client
 

@@ -26,3 +26,7 @@ data
 
 # old files
 old
+
+#pytest
+**.pytest_cache
+

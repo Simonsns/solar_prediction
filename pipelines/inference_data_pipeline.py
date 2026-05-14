@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 # Modules 
 from src.services.supabase_service import SupabaseService
 from src.utils.config import SolarSettings
-from src.data_pipeline.data_processing import solar_preprocessing, feature_engine
-from src.data_pipeline.data_collection import fetching_solar_data, fetching_weather_data
+from src.etl.data_processing import solar_preprocessing, feature_engine
+from src.etl.data_collection import fetching_solar_data, fetching_weather_data
 
 # Schemas
-from src.data_pipeline import schemas
+from src.etl import schemas
 
 class SolarETLInferenceJob:
     """Solar orchestrator for ETL"""
