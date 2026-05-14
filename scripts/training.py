@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 PROJECT_ROOT = Path().resolve().parent
 os.chdir(PROJECT_ROOT)
-from pipelines.training_pipeline import SolarTrainingOrchestrator
+from src.pipelines.training_pipeline import SolarTrainingOrchestrator
 from src.etl import processors
 from src.utils.config import settings
 from src.utils.logger import setup_logging

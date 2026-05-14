@@ -7,8 +7,8 @@ date : 22/04/2026
 from src.utils.logger import setup_logging
 setup_logging()
 from src.utils.config import settings
-from pipelines.inference_data_pipeline import SolarETLInferenceJob
-from pipelines.inference_pipeline import InferenceJob
+from src.pipelines.inference_data_pipeline import SolarETLInferenceJob
+from src.pipelines.inference_pipeline import InferenceJob
 from src.services.supabase_service import SupabaseService
 
 if __name__ == "__main__":

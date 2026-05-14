@@ -6,7 +6,7 @@ date : 22/04/2026
 """
 
 # Dependencies
-from pipelines.quantile_update_pipeline import RollingQuantile
+from src.pipelines.quantile_update_pipeline import RollingQuantile
 from src.utils.config import settings
 from src.utils.logger import setup_logging
 
